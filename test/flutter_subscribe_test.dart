@@ -1,0 +1,5 @@
+
+
+class MockFlutterSubscribePlatform {}
+
+void main() {}
