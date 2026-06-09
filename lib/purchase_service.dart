@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -48,33 +49,66 @@ mixin PurchaseService {
   Future<bool> purchaseAppleVerify({required String receiptData});
 
   /// 获取订单数据
-  Future<List<PurchaseData>> getPurchaseList() async {
+  Future<List<PurchaseData>> getPurchaseList({required bool develop}) async {
     if (_isEffective == true && _list.isNotEmpty) return _list;
+    if (develop == true) {
+      await Future.delayed(const Duration(seconds: 2));
+      return _list;
+    } else {
+      Set<String> productIds = _list.map((item) => item.id).toSet();
 
-    Set<String> productIds = _list.map((item) => item.id).toSet();
+      final ProductDetailsResponse productResponse = await InAppPurchase
+          .instance
+          .queryProductDetails(productIds);
 
-    final ProductDetailsResponse productResponse = await InAppPurchase.instance
-        .queryProductDetails(productIds);
+      if (productResponse.error != null) return [];
 
-    if (productResponse.error != null) return [];
-
-    for (final item in _list) {
-      for (final details in productResponse.productDetails) {
-        if (details.id == item.id) {
-          item.details = details;
-          break;
+      for (final item in _list) {
+        for (final details in productResponse.productDetails) {
+          if (details.id == item.id) {
+            item.details = details;
+            break;
+          }
         }
       }
     }
+
     _isEffective = true;
     return _list;
   }
 
   /// 更新订单配置
-  void updatePurchasesConfig(List configs) {
+  void updatePurchasesConfig({required String config, required bool develop}) {
     _list.clear();
-    for (final item in configs) {
-      _list.add(PurchaseData.fromJson(item));
+    if (develop == true) {
+      _list.addAll([
+        PurchaseData(
+          id: 'Lifetime',
+          name: 'Lifetime',
+          code: 'Lifetime',
+          recommend: true,
+          selected: true,
+        ),
+        PurchaseData(
+          id: 'Yearly',
+          name: 'Yearly',
+          code: 'Yearly',
+          recommend: false,
+          selected: false,
+        ),
+        PurchaseData(
+          id: 'Weekly',
+          name: 'Weekly',
+          code: 'Weekly',
+          recommend: false,
+          selected: false,
+        ),
+      ]);
+    } else if (config.isNotEmpty) {
+      final list = jsonDecode(config)['list'];
+      for (final item in list) {
+        _list.add(PurchaseData.fromJson(item));
+      }
     }
   }
 
