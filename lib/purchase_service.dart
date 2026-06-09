@@ -49,7 +49,7 @@ mixin PurchaseService {
   Future<bool> purchaseAppleVerify({required String receiptData});
 
   /// 获取订单数据
-  Future<List<PurchaseData>> getPurchaseList({required bool develop}) async {
+  Future<List<PurchaseData>> getPurchaseList(bool develop) async {
     if (_isEffective == true && _list.isNotEmpty) return _list;
     if (develop == true) {
       await Future.delayed(const Duration(seconds: 2));
@@ -78,37 +78,11 @@ mixin PurchaseService {
   }
 
   /// 更新订单配置
-  void updatePurchasesConfig({required String config, required bool develop}) {
+  void updatePurchasesConfig(String config) {
     _list.clear();
-    if (develop == true) {
-      _list.addAll([
-        PurchaseData(
-          id: 'Lifetime',
-          name: 'Lifetime',
-          code: 'Lifetime',
-          recommend: true,
-          selected: true,
-        ),
-        PurchaseData(
-          id: 'Yearly',
-          name: 'Yearly',
-          code: 'Yearly',
-          recommend: false,
-          selected: false,
-        ),
-        PurchaseData(
-          id: 'Weekly',
-          name: 'Weekly',
-          code: 'Weekly',
-          recommend: false,
-          selected: false,
-        ),
-      ]);
-    } else if (config.isNotEmpty) {
-      final list = jsonDecode(config)['list'];
-      for (final item in list) {
-        _list.add(PurchaseData.fromJson(item));
-      }
+    final list = jsonDecode(config)['list'];
+    for (final item in list) {
+      _list.add(PurchaseData.fromJson(item));
     }
   }
 
