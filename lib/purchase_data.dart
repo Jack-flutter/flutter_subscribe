@@ -1,21 +1,35 @@
 import 'package:in_app_purchase/in_app_purchase.dart';
 
+class PurchaseConfig {
+  final String hotId;
+  final String selectedId;
+  final List<PurchaseData> list;
+
+  PurchaseConfig({
+    required this.hotId,
+    required this.selectedId,
+    required this.list,
+  });
+
+  factory PurchaseConfig.fromJson(Map<String, dynamic> json) {
+    return PurchaseConfig(
+      hotId: json['hot_id'] ?? '',
+      selectedId: json['selected_id'] ?? '',
+      list: List<PurchaseData>.from(
+        (json['list'] ?? []).map((x) => PurchaseData.fromJson(x)),
+      ),
+    );
+  }
+}
+
 class PurchaseData {
   final String id;
   final String name;
   final String code;
-  final bool hot;
-  final bool selected;
 
   ProductDetails? details;
 
-  PurchaseData({
-    required this.id,
-    required this.name,
-    required this.code,
-    required this.hot,
-    required this.selected,
-  });
+  PurchaseData({required this.id, required this.name, required this.code});
 
   String get orderPrice {
     if (details == null) return '--';
@@ -29,8 +43,6 @@ class PurchaseData {
       id: json['id'] ?? "",
       name: json['name'] ?? "",
       code: json['code'] ?? "",
-      hot: json['hot'] ?? false,
-      selected: json['selected'] ?? false,
     );
   }
 }

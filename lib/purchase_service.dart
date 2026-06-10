@@ -15,7 +15,7 @@ mixin PurchaseService {
 
   Function(bool success)? _purchaseCall;
 
-  final List<PurchaseData> _list = <PurchaseData>[];
+  PurchaseConfig config = PurchaseConfig(hotId: '', selectedId: '', list: []);
 
   bool _isEffective = false;
   bool _isExecute = false;
@@ -49,21 +49,21 @@ mixin PurchaseService {
   Future<bool> purchaseAppleVerify({required String receiptData});
 
   /// 获取订单数据
-  Future<List<PurchaseData>> getPurchaseList(bool develop) async {
-    if (_isEffective == true && _list.isNotEmpty) return _list;
+  Future<PurchaseConfig?> getPurchaseList(bool develop) async {
+    if (_isEffective == true && config.list.isNotEmpty) return config;
     if (develop == true) {
       await Future.delayed(const Duration(seconds: 2));
-      return _list;
+      return config;
     } else {
-      Set<String> productIds = _list.map((item) => item.id).toSet();
+      Set<String> productIds = config.list.map((item) => item.id).toSet();
 
       final ProductDetailsResponse productResponse = await InAppPurchase
           .instance
           .queryProductDetails(productIds);
 
-      if (productResponse.error != null) return [];
+      if (productResponse.error != null) return config;
 
-      for (final item in _list) {
+      for (final item in config.list) {
         for (final details in productResponse.productDetails) {
           if (details.id == item.id) {
             item.details = details;
@@ -74,16 +74,12 @@ mixin PurchaseService {
     }
 
     _isEffective = true;
-    return _list;
+    return config;
   }
 
   /// 更新订单配置
-  void updatePurchasesConfig(String config) {
-    _list.clear();
-    final list = jsonDecode(config)['list'];
-    for (final item in list) {
-      _list.add(PurchaseData.fromJson(item));
-    }
+  void updatePurchasesConfig(String json) {
+    config = PurchaseConfig.fromJson(jsonDecode(json));
   }
 
   /// 购买订单
