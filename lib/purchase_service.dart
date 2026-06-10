@@ -15,7 +15,11 @@ mixin PurchaseService {
 
   Function(bool success)? _purchaseCall;
 
-  PurchaseConfig config = PurchaseConfig(hotId: '', selectedId: '', list: []);
+  PurchaseConfig config = PurchaseConfig(
+    hotCode: '',
+    selectedCode: '',
+    list: [],
+  );
 
   bool _isEffective = false;
   bool _isExecute = false;
