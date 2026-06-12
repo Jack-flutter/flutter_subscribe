@@ -124,10 +124,14 @@ mixin PurchaseService {
     _isExecute = true;
     _purchaseCall = restoreCall;
 
-    if (Platform.isIOS) {
-      _purchasedAppleBuy();
-    } else {
-      InAppPurchase.instance.restorePurchases();
+    try {
+      if (Platform.isIOS) {
+        await _purchasedAppleBuy();
+      } else {
+        await InAppPurchase.instance.restorePurchases();
+      }
+    } catch (_) {
+      _notifyPurchasCallNotice(false);
     }
   }
 
@@ -192,7 +196,7 @@ mixin PurchaseService {
     _notifyPurchasCallNotice(res);
   }
 
-  void _purchasedAppleBuy() async {
+  Future _purchasedAppleBuy() async {
     await SKRequestMaker().startRefreshReceiptRequest();
     final receiptData = await SKReceiptManager.retrieveReceiptData();
     final res = await purchaseAppleVerify(receiptData: receiptData);
