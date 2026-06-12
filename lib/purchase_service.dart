@@ -29,7 +29,7 @@ mixin PurchaseService {
     // 创建监听
     _purchaseStreamSubscription = InAppPurchase.instance.purchaseStream.listen(
       cancelOnError: false,
-      (List<PurchaseDetails> purchaseDetailsList) {
+          (List<PurchaseDetails> purchaseDetailsList) {
         _onPurchaseMonitor(purchaseDetailsList);
       },
       onDone: () {
@@ -41,8 +41,8 @@ mixin PurchaseService {
     );
 
     final InAppPurchaseStoreKitPlatformAddition iosPlatformAddition =
-        InAppPurchase.instance
-            .getPlatformAddition<InAppPurchaseStoreKitPlatformAddition>();
+    InAppPurchase.instance
+        .getPlatformAddition<InAppPurchaseStoreKitPlatformAddition>();
     await iosPlatformAddition.setDelegate(AppleQueueDelegate());
   }
 
@@ -124,14 +124,10 @@ mixin PurchaseService {
     _isExecute = true;
     _purchaseCall = restoreCall;
 
-    try {
-      if (Platform.isIOS) {
-        await _purchasedAppleBuy();
-      } else {
-        await InAppPurchase.instance.restorePurchases();
-      }
-    } catch (_) {
-      _notifyPurchasCallNotice(false);
+    if (Platform.isIOS) {
+      await _purchasedAppleBuy();
+    } else {
+      await InAppPurchase.instance.restorePurchases();
     }
   }
 
@@ -163,9 +159,10 @@ mixin PurchaseService {
 
     final List<PurchaseDetails> orderList = List.from(purchaseDetailsList);
     orderList.sort(
-      (a, b) => (int.tryParse(b.transactionDate ?? '') ?? 0).compareTo(
-        int.tryParse(a.transactionDate ?? '') ?? 0,
-      ),
+          (a, b) =>
+          (int.tryParse(b.transactionDate ?? '') ?? 0).compareTo(
+            int.tryParse(a.transactionDate ?? '') ?? 0,
+          ),
     );
 
     final firstPurchase = orderList.first;
@@ -197,10 +194,15 @@ mixin PurchaseService {
   }
 
   Future _purchasedAppleBuy() async {
-    await SKRequestMaker().startRefreshReceiptRequest();
-    final receiptData = await SKReceiptManager.retrieveReceiptData();
-    final res = await purchaseAppleVerify(receiptData: receiptData);
-    _notifyPurchasCallNotice(res);
+    try {
+      await SKRequestMaker().startRefreshReceiptRequest();
+      final receiptData = await SKReceiptManager.retrieveReceiptData();
+      final res = await purchaseAppleVerify(receiptData: receiptData);
+      _notifyPurchasCallNotice(res);
+    } catch (_) {
+      _isExecute = false;
+      _notifyPurchasCallNotice(false);
+    }
   }
 
   /// 购买失败处理
