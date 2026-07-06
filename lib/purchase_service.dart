@@ -29,7 +29,7 @@ mixin PurchaseService {
     // 创建监听
     _purchaseStreamSubscription = InAppPurchase.instance.purchaseStream.listen(
       cancelOnError: false,
-          (List<PurchaseDetails> purchaseDetailsList) {
+      (List<PurchaseDetails> purchaseDetailsList) {
         _onPurchaseMonitor(purchaseDetailsList);
       },
       onDone: () {
@@ -41,8 +41,8 @@ mixin PurchaseService {
     );
 
     final InAppPurchaseStoreKitPlatformAddition iosPlatformAddition =
-    InAppPurchase.instance
-        .getPlatformAddition<InAppPurchaseStoreKitPlatformAddition>();
+        InAppPurchase.instance
+            .getPlatformAddition<InAppPurchaseStoreKitPlatformAddition>();
     await iosPlatformAddition.setDelegate(AppleQueueDelegate());
   }
 
@@ -56,28 +56,36 @@ mixin PurchaseService {
   Future<PurchaseConfig?> getPurchaseList(bool develop) async {
     if (_isEffective == true && config.list.isNotEmpty) return config;
     if (develop == true) {
+      _isEffective = true;
       await Future.delayed(const Duration(seconds: 2));
       return config;
     } else {
-      Set<String> productIds = config.list.map((item) => item.id).toSet();
+      try {
+        Set<String> productIds = config.list.map((item) => item.id).toSet();
 
-      final ProductDetailsResponse productResponse = await InAppPurchase
-          .instance
-          .queryProductDetails(productIds);
+        final ProductDetailsResponse productResponse = await InAppPurchase
+            .instance
+            .queryProductDetails(productIds);
 
-      if (productResponse.error != null) return config;
+        if (productResponse.error != null ||
+            productResponse.productDetails.isEmpty) {
+          _isEffective = false;
+          return config;
+        }
 
-      for (final item in config.list) {
-        for (final details in productResponse.productDetails) {
-          if (details.id == item.id) {
-            item.details = details;
-            break;
+        for (final item in config.list) {
+          for (final details in productResponse.productDetails) {
+            if (details.id == item.id) {
+              item.details = details;
+              break;
+            }
           }
         }
+        _isEffective = true;
+      } catch (_) {
+        _isEffective = false;
       }
     }
-
-    _isEffective = true;
     return config;
   }
 
@@ -159,10 +167,9 @@ mixin PurchaseService {
 
     final List<PurchaseDetails> orderList = List.from(purchaseDetailsList);
     orderList.sort(
-          (a, b) =>
-          (int.tryParse(b.transactionDate ?? '') ?? 0).compareTo(
-            int.tryParse(a.transactionDate ?? '') ?? 0,
-          ),
+      (a, b) => (int.tryParse(b.transactionDate ?? '') ?? 0).compareTo(
+        int.tryParse(a.transactionDate ?? '') ?? 0,
+      ),
     );
 
     final firstPurchase = orderList.first;
