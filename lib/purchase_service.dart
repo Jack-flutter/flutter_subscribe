@@ -91,6 +91,7 @@ mixin PurchaseService {
 
   /// 更新订单配置
   void updatePurchasesConfig(String json) {
+    if (_isEffective == true) return;
     config = PurchaseConfig.fromJson(jsonDecode(json));
   }
 
