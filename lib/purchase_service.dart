@@ -14,6 +14,7 @@ mixin PurchaseService {
   StreamSubscription<List<PurchaseDetails>>? _purchaseStreamSubscription;
 
   Function(bool success)? _purchaseCall;
+  Function(bool success)? _sereversCall;
 
   PurchaseConfig config = PurchaseConfig(
     hotCode: '',
@@ -36,7 +37,7 @@ mixin PurchaseService {
         _purchaseStreamSubscription?.cancel();
       },
       onError: (Object error) {
-        _notifyPurchasCallNotice(false);
+        _notifyPurchasCallNotice(purchase: false);
       },
     );
 
@@ -99,16 +100,17 @@ mixin PurchaseService {
   Future<void> purchaseBuy({
     required ProductDetails details,
     required Function(bool success) purchaseCall,
+    required Function(bool success) sereversCall,
   }) async {
     if (_isExecute) return;
 
     _isExecute = true;
     _purchaseCall = purchaseCall;
+    _sereversCall = sereversCall;
 
     final bool isAvailable = await InAppPurchase.instance.isAvailable();
     if (!isAvailable) {
-      _isExecute = false;
-      _notifyPurchasCallNotice(false);
+      _notifyPurchasCallNotice(purchase: false);
       return;
     }
     try {
@@ -116,22 +118,24 @@ mixin PurchaseService {
       final bool purchaseState = await InAppPurchase.instance.buyNonConsumable(
         purchaseParam: PurchaseParam(productDetails: details),
       );
-      _isExecute = false;
-      if (!purchaseState) {
-        _notifyPurchasCallNotice(false);
+      if (purchaseState == false) {
+        _notifyPurchasCallNotice(purchase: false);
       }
     } catch (_) {
-      _isExecute = false;
-      _notifyPurchasCallNotice(false);
+      _notifyPurchasCallNotice(purchase: false);
     }
   }
 
   /// 恢复购买订单
-  Future<void> purchaseRestore(Function(bool success)? restoreCall) async {
-    if (_isExecute) return;
+  Future<void> purchaseRestore({
+    required Function(bool success) restoreCall,
+    required Function(bool success) sereversCall,
+  }) async {
+    if (_isExecute == true) return;
 
     _isExecute = true;
     _purchaseCall = restoreCall;
+    _sereversCall = sereversCall;
 
     if (Platform.isIOS) {
       await _purchasedAppleBuy();
@@ -162,7 +166,7 @@ mixin PurchaseService {
   void _onPurchaseMonitor(List<PurchaseDetails> purchaseDetailsList) {
     if (purchaseDetailsList.isEmpty && Platform.isAndroid) {
       purchaseAndroidVerify(null);
-      _notifyPurchasCallNotice(true);
+      _notifyPurchasCallNotice(purchase: true, serevers: true);
       return;
     }
 
@@ -187,6 +191,7 @@ mixin PurchaseService {
       _onPurchaseError(firstPurchase);
     } else if (firstPurchase.status == PurchaseStatus.purchased ||
         firstPurchase.status == PurchaseStatus.restored) {
+      _purchaseCall?.call(true);
       if (Platform.isAndroid) {
         var googleDetail = firstPurchase as GooglePlayPurchaseDetails;
         _purchasedAndroid(googleDetail);
@@ -197,8 +202,12 @@ mixin PurchaseService {
   }
 
   void _purchasedAndroid(GooglePlayPurchaseDetails? details) async {
-    final res = await purchaseAndroidVerify(details);
-    _notifyPurchasCallNotice(res);
+    try {
+      final res = await purchaseAndroidVerify(details);
+      _notifyPurchasCallNotice(serevers: res);
+    } catch (_) {
+      _notifyPurchasCallNotice(serevers: false);
+    }
   }
 
   Future _purchasedAppleBuy() async {
@@ -206,25 +215,26 @@ mixin PurchaseService {
       await SKRequestMaker().startRefreshReceiptRequest();
       final receiptData = await SKReceiptManager.retrieveReceiptData();
       final res = await purchaseAppleVerify(receiptData: receiptData);
-      _notifyPurchasCallNotice(res);
+      _notifyPurchasCallNotice(serevers: res);
     } catch (_) {
-      _isExecute = false;
-      _notifyPurchasCallNotice(false);
+      _notifyPurchasCallNotice(serevers: false);
     }
   }
 
   /// 购买失败处理
   void _onPurchaseError(PurchaseDetails purchase) {
-    _notifyPurchasCallNotice(false);
+    _notifyPurchasCallNotice(purchase: false);
   }
 
   /// 等待支付处理
   void _onPurchasePending() {}
 
   /// 发送回调事件
-  void _notifyPurchasCallNotice(bool success) {
-    _purchaseCall?.call(success);
+  void _notifyPurchasCallNotice({bool? purchase, bool? serevers}) {
+    if (purchase != null) _purchaseCall?.call(purchase);
+    if (serevers != null) _sereversCall?.call(serevers);
     _purchaseCall = null;
+    _sereversCall = null;
     _isExecute = false;
   }
 }
