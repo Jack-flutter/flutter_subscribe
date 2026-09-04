@@ -10,11 +10,12 @@ import 'package:in_app_purchase_storekit/store_kit_wrappers.dart';
 import 'apple_delegate.dart';
 import 'purchase_data.dart';
 
+enum PurchaseType { suc, verify, serevers, fail }
+
 mixin PurchaseService {
   StreamSubscription<List<PurchaseDetails>>? _purchaseStreamSubscription;
 
-  Function(bool success)? _purchaseCall;
-  Function(bool success)? _sereversCall;
+  Function(PurchaseType)? _purchaseCall;
 
   PurchaseConfig config = PurchaseConfig(
     hotCode: '',
@@ -36,9 +37,7 @@ mixin PurchaseService {
       onDone: () {
         _purchaseStreamSubscription?.cancel();
       },
-      onError: (Object error) {
-        _notifyPurchasCallNotice(purchase: false);
-      },
+      onError: (Object error) {},
     );
 
     final InAppPurchaseStoreKitPlatformAddition iosPlatformAddition =
@@ -99,18 +98,16 @@ mixin PurchaseService {
   /// 购买订单
   Future<void> purchaseBuy({
     required ProductDetails details,
-    required Function(bool success) purchaseCall,
-    required Function(bool success) sereversCall,
+    Function(PurchaseType)? purchaseCall,
   }) async {
     if (_isExecute) return;
 
     _isExecute = true;
     _purchaseCall = purchaseCall;
-    _sereversCall = sereversCall;
 
     final bool isAvailable = await InAppPurchase.instance.isAvailable();
     if (!isAvailable) {
-      _notifyPurchasCallNotice(purchase: false);
+      _notifyPurchasCallNotice(PurchaseType.fail);
       return;
     }
     try {
@@ -119,23 +116,19 @@ mixin PurchaseService {
         purchaseParam: PurchaseParam(productDetails: details),
       );
       if (purchaseState == false) {
-        _notifyPurchasCallNotice(purchase: false);
+        _notifyPurchasCallNotice(PurchaseType.fail);
       }
     } catch (_) {
-      _notifyPurchasCallNotice(purchase: false);
+      _notifyPurchasCallNotice(PurchaseType.fail);
     }
   }
 
   /// 恢复购买订单
-  Future<void> purchaseRestore({
-    required Function(bool success) restoreCall,
-    required Function(bool success) sereversCall,
-  }) async {
+  Future<void> purchaseRestore({Function(PurchaseType)? purchaseCall}) async {
     if (_isExecute == true) return;
 
     _isExecute = true;
-    _purchaseCall = restoreCall;
-    _sereversCall = sereversCall;
+    _purchaseCall = purchaseCall;
 
     if (Platform.isIOS) {
       await _purchasedAppleBuy();
@@ -164,12 +157,13 @@ mixin PurchaseService {
 
   /// 购买更新监听
   void _onPurchaseMonitor(List<PurchaseDetails> purchaseDetailsList) {
+    _notifyPurchasCallNotice(PurchaseType.verify);
     if (purchaseDetailsList.isEmpty && Platform.isAndroid) {
       purchaseAndroidVerify(null);
-      _notifyPurchasCallNotice(purchase: true, serevers: true);
+      _notifyPurchasCallNotice(PurchaseType.suc);
+      _notifyPurchasCallNotice(PurchaseType.serevers);
       return;
     }
-
     final List<PurchaseDetails> orderList = List.from(purchaseDetailsList);
     orderList.sort(
       (a, b) => (int.tryParse(b.transactionDate ?? '') ?? 0).compareTo(
@@ -191,7 +185,7 @@ mixin PurchaseService {
       _onPurchaseError(firstPurchase);
     } else if (firstPurchase.status == PurchaseStatus.purchased ||
         firstPurchase.status == PurchaseStatus.restored) {
-      _purchaseCall?.call(true);
+      _notifyPurchasCallNotice(PurchaseType.suc);
       if (Platform.isAndroid) {
         var googleDetail = firstPurchase as GooglePlayPurchaseDetails;
         _purchasedAndroid(googleDetail);
@@ -204,9 +198,10 @@ mixin PurchaseService {
   void _purchasedAndroid(GooglePlayPurchaseDetails? details) async {
     try {
       final res = await purchaseAndroidVerify(details);
-      _notifyPurchasCallNotice(serevers: res);
+      final PurchaseType type = res ? PurchaseType.serevers : PurchaseType.fail;
+      _notifyPurchasCallNotice(type);
     } catch (_) {
-      _notifyPurchasCallNotice(serevers: false);
+      _notifyPurchasCallNotice(PurchaseType.fail);
     }
   }
 
@@ -215,26 +210,23 @@ mixin PurchaseService {
       await SKRequestMaker().startRefreshReceiptRequest();
       final receiptData = await SKReceiptManager.retrieveReceiptData();
       final res = await purchaseAppleVerify(receiptData: receiptData);
-      _notifyPurchasCallNotice(serevers: res);
+      final PurchaseType type = res ? PurchaseType.serevers : PurchaseType.fail;
+      _notifyPurchasCallNotice(type);
     } catch (_) {
-      _notifyPurchasCallNotice(serevers: false);
+      _notifyPurchasCallNotice(PurchaseType.fail);
     }
   }
 
   /// 购买失败处理
   void _onPurchaseError(PurchaseDetails purchase) {
-    _notifyPurchasCallNotice(purchase: false);
+    _notifyPurchasCallNotice(PurchaseType.fail);
   }
 
   /// 等待支付处理
   void _onPurchasePending() {}
 
-  /// 发送回调事件
-  void _notifyPurchasCallNotice({bool? purchase, bool? serevers}) {
-    if (purchase != null) _purchaseCall?.call(purchase);
-    if (serevers != null) _sereversCall?.call(serevers);
-    _purchaseCall = null;
-    _sereversCall = null;
-    _isExecute = false;
+  /// 发送订阅回调事件
+  void _notifyPurchasCallNotice(PurchaseType type) {
+    _purchaseCall?.call(type);
   }
 }
