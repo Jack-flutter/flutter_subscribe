@@ -222,5 +222,8 @@ mixin PurchaseService {
   /// 发送订阅回调事件
   void _notifyPurchasCallNotice(PurchaseType type) {
     _purchaseCall?.call(type);
+    if (type == PurchaseType.fail || type == PurchaseType.serevers) {
+      _purchaseCall = null;
+    }
   }
 }
