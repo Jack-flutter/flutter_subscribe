@@ -150,10 +150,14 @@ mixin PurchaseService {
 
   /// 购买更新监听
   void _onPurchaseMonitor(List<PurchaseDetails> purchaseDetailsList) {
-    if (purchaseDetailsList.isEmpty && Platform.isAndroid) {
-      purchaseAndroidVerify(null);
-      _notifyPurchasCallNotice(PurchaseType.suc);
-      _notifyPurchasCallNotice(PurchaseType.serevers);
+    if (purchaseDetailsList.isEmpty) {
+      if (Platform.isAndroid && _isEffective == true) {
+        purchaseAndroidVerify(null);
+        _notifyPurchasCallNotice(PurchaseType.suc);
+        _notifyPurchasCallNotice(PurchaseType.serevers);
+      } else {
+        _notifyPurchasCallNotice(PurchaseType.fail);
+      }
       return;
     }
     final List<PurchaseDetails> orderList = List.from(purchaseDetailsList);
