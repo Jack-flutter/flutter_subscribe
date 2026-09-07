@@ -150,7 +150,6 @@ mixin PurchaseService {
 
   /// 购买更新监听
   void _onPurchaseMonitor(List<PurchaseDetails> purchaseDetailsList) {
-    _notifyPurchasCallNotice(PurchaseType.verify);
     if (purchaseDetailsList.isEmpty && Platform.isAndroid) {
       purchaseAndroidVerify(null);
       _notifyPurchasCallNotice(PurchaseType.suc);
@@ -165,11 +164,13 @@ mixin PurchaseService {
     );
 
     final firstPurchase = orderList.first;
+    bool isVerify = false;
     for (PurchaseDetails purchase in orderList) {
       if (purchase.pendingCompletePurchase == false) continue;
       InAppPurchase.instance.completePurchase(purchase);
+      isVerify = true;
     }
-
+    if (isVerify == true) _notifyPurchasCallNotice(PurchaseType.verify);
     if (firstPurchase.status == PurchaseStatus.pending) {
       _onPurchasePending();
     } else if (firstPurchase.status == PurchaseStatus.canceled) {
