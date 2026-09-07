@@ -24,7 +24,6 @@ mixin PurchaseService {
   );
 
   bool _isEffective = false;
-  bool _isExecute = false;
 
   /// 初始化 SDK
   Future<void> initializeSdk() async {
@@ -100,9 +99,6 @@ mixin PurchaseService {
     required ProductDetails details,
     Function(PurchaseType)? purchaseCall,
   }) async {
-    if (_isExecute) return;
-
-    _isExecute = true;
     _purchaseCall = purchaseCall;
 
     final bool isAvailable = await InAppPurchase.instance.isAvailable();
@@ -125,9 +121,6 @@ mixin PurchaseService {
 
   /// 恢复购买订单
   Future<void> purchaseRestore({Function(PurchaseType)? purchaseCall}) async {
-    if (_isExecute == true) return;
-
-    _isExecute = true;
     _purchaseCall = purchaseCall;
 
     if (Platform.isIOS) {
