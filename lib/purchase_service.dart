@@ -151,7 +151,7 @@ mixin PurchaseService {
   /// 购买更新监听
   void _onPurchaseMonitor(List<PurchaseDetails> purchaseDetailsList) {
     if (purchaseDetailsList.isEmpty) {
-      _notifyPurchasCallNotice(PurchaseType.fail);
+      Platform.isAndroid ? _purchasedAndroid(null) : _purchasedAppleBuy();
       return;
     }
     final List<PurchaseDetails> orderList = List.from(purchaseDetailsList);
